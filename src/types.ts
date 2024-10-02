@@ -1,8 +1,7 @@
 export type AllowedScopesPolicyRecordKey = {
-  principal: string; // Cognito App Client ID
-  resource: string; // Api Gateway REST API ID
+  client: string; // Cognito App Client ID
 };
 
 export type AllowedScopesPolicy = AllowedScopesPolicyRecordKey & {
-  action: string[]; // List of Cognito Resource Server scopes
+  scopes: string[]; // List of Cognito Resource Server scopes
 };

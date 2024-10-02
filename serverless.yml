@@ -57,7 +57,7 @@ functions:
       APP_CLIENT_ID:
         Fn::Sub: ${UserPoolClient}
       REST_API_ID:
-        Fn::Sub: ${ApiGatewayAccount}
+        Fn::Sub: ${ApiGateway}
   Authorizer:
     name: ${env:SERVICE_PREFIX}-authorizer
     handler: src/authorizer.handler
@@ -109,8 +109,7 @@ resources:
     UserPoolClient:
       Type: AWS::Cognito::UserPoolClient
       DependsOn:
-        - FooBarResourceServer
-        - ArticlesResourceServer
+        - ResourceServer
       Properties:
         ClientName: ${env:SERVICE_PREFIX}-app-client
         UserPoolId:
@@ -118,9 +117,8 @@ resources:
         AllowedOAuthFlows:
           - client_credentials
         AllowedOAuthScopes:
-          - foobar/42
-          - articles/read
-          - articles/write
+          - account/read
+          - account/write
         AllowedOAuthFlowsUserPoolClient: true
         ExplicitAuthFlows:
           - ALLOW_USER_SRP_AUTH
@@ -128,25 +126,15 @@ resources:
         GenerateSecret: true
         EnableTokenRevocation: true
         PreventUserExistenceErrors: ENABLED
-    FooBarResourceServer:
+    ResourceServer:
       Type: AWS::Cognito::UserPoolResourceServer
       Properties:
-        Identifier: foobar
-        Name: ${env:SERVICE_PREFIX}-foobar
+        Identifier: account
+        Name: ${env:SERVICE_PREFIX}-account
         Scopes:
-          - ScopeDescription: Default dummy scope
-            ScopeName: 42
-        UserPoolId:
-          Fn::Sub: ${UserPool}
-    ArticlesResourceServer:
-      Type: AWS::Cognito::UserPoolResourceServer
-      Properties:
-        Identifier: articles
-        Name: ${env:SERVICE_PREFIX}-articles
-        Scopes:
-          - ScopeDescription: Read articles
+          - ScopeDescription: Read accounts
             ScopeName: read
-          - ScopeDescription: Create/update/delete articles
+          - ScopeDescription: Create/update/delete accounts
             ScopeName: write
         UserPoolId:
           Fn::Sub: ${UserPool}
@@ -157,32 +145,28 @@ resources:
       Properties:
         TableName: ${env:SERVICE_PREFIX}-client-scopes-policies
         KeySchema:
-          - AttributeName: principal
+          - AttributeName: client
             KeyType: HASH
-          - AttributeName: resource
-            KeyType: RANGE
         AttributeDefinitions:
-          - AttributeName: principal
-            AttributeType: S
-          - AttributeName: resource
+          - AttributeName: client
             AttributeType: S
         BillingMode: PAY_PER_REQUEST
 
-    # Account API config
-    ApiGatewayAccount:
+    # API config
+    ApiGateway:
       Type: AWS::ApiGateway::RestApi
       Properties:
         Name: ${env:SERVICE_PREFIX}-account
-        Body: ${file(./api-account.yaml)}
-    ApiGatewayDeploymentAccount:
+        Body: ${file(./api.yaml)}
+    ApiGatewayDeployment:
       Type: AWS::ApiGateway::Deployment
       DependsOn:
-        - ApiGatewayAccount
+        - ApiGateway
       Properties:
         RestApiId:
-          Fn::Sub: ${ApiGatewayAccount}
+          Fn::Sub: ${ApiGateway}
         StageName: ${self:provider.stage}
-    AuthorizerLambdaPermissionAccount:
+    AuthorizerLambdaPermission:
       Type: AWS::Lambda::Permission
       Properties:
         Action: lambda:InvokeFunction
@@ -190,19 +174,4 @@ resources:
           Fn::Sub: ${AuthorizerLambdaFunction.Arn}
         Principal: apigateway.amazonaws.com
         SourceArn:
-          Fn::Sub: arn:aws:execute-api:${aws:region}:${aws:accountId}:${ApiGatewayAccount}/authorizers/*
-
-    # Articles API config
-    ApiGatewayArticles:
-      Type: AWS::ApiGateway::RestApi
-      Properties:
-        Name: ${env:SERVICE_PREFIX}-articles
-        Body: ${file(./api-articles.yaml)}
-    ApiGatewayDeploymentArticles:
-      Type: AWS::ApiGateway::Deployment
-      DependsOn:
-        - ApiGatewayArticles
-      Properties:
-        RestApiId:
-          Fn::Sub: ${ApiGatewayArticles}
-        StageName: ${self:provider.stage}
+          Fn::Sub: arn:aws:execute-api:${aws:region}:${aws:accountId}:${ApiGateway}/authorizers/*

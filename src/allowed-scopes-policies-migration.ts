@@ -13,8 +13,7 @@ export const handler = async (): Promise<void> => {
     const deleteCommand = new DeleteCommand({
       TableName: process.env.CLIENT_SCOPES_TABLE,
       Key: {
-        principal: item.principal,
-        resource: item.resource,
+        client: item.client,
       } satisfies AllowedScopesPolicyRecordKey,
     });
     cleanupPromises.push(dynamoDocumentClient.send(deleteCommand));
@@ -25,9 +24,8 @@ export const handler = async (): Promise<void> => {
   const putCommand = new PutCommand({
     TableName: process.env.CLIENT_SCOPES_TABLE,
     Item: {
-      principal: process.env.APP_CLIENT_ID,
-      resource: process.env.REST_API_ID,
-      action: ['getAccount', 'createAccount'],
+      client: process.env.APP_CLIENT_ID,
+      scopes: ['account/read', 'account/write'],
     } satisfies AllowedScopesPolicy,
   });
   await dynamoDocumentClient.send(putCommand);

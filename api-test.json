@@ -2,22 +2,22 @@
   "openapi": "3.0.0",
   "info": {
     "version": "1.0.0",
-    "title": "Cognito Scopes Dynamo PoC - Articles API",
+    "title": "Cognito Scopes Dynamo PoC - Account API",
     "license": {
       "name": "MIT",
       "url": "https://opensource.org/license/mit/"
     }
   },
   "paths": {
-    "/article/{articleId}": {
+    "/account/{accountId}": {
       "get": {
-        "operationId": "getArticle",
+        "operationId": "getAccount",
         "parameters": [
           {
-            "name": "articleId",
+            "name": "accountId",
             "in": "path",
             "required": true,
-            "description": "The id of the article to retrieve",
+            "description": "The id of the account to retrieve",
             "schema": {
               "type": "string"
             }
@@ -25,8 +25,11 @@
         ],
         "security": [
           {
-            "cognito_authorizer": [
-              "articles/read"
+            "custom_authorizer": []
+          },
+          {
+            "oauth2ClientCredentials": [
+              "account.read"
             ]
           }
         ],
@@ -51,7 +54,7 @@
             "default": {
               "statusCode": "200",
               "responseTemplates": {
-                "application/json": "{\n    \"articleData\": \"...JSON object...\"\n}"
+                "application/json": "{\n    \"accountData\": \"...JSON object...\"\n}"
               }
             }
           },
@@ -61,13 +64,17 @@
         }
       }
     },
-    "/article": {
+    "/account": {
       "post": {
-        "operationId": "createArticle",
+        "operationId": "createAccount",
         "security": [
           {
-            "cognito_authorizer": [
-              "articles/write"
+            "custom_authorizer": []
+          },
+          {
+            "oauth2ClientCredentials": [
+              "account.read",
+              "account.write"
             ]
           }
         ],
@@ -113,19 +120,32 @@
       }
     },
     "securitySchemes": {
-      "cognito_authorizer": {
+      "oauth2ClientCredentials": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": {
+              "Fn::Sub": "https://${UserPool}.auth.${aws:region}.amazoncognito.com/oauth2/token"
+            },
+            "scopes": {
+              "account.read": "Read accounts",
+              "account.write": "Create/update/delete accounts"
+            }
+          }
+        }
+      },
+      "custom_authorizer": {
         "type": "apiKey",
         "name": "Authorization",
         "in": "header",
-        "x-amazon-apigateway-authtype": "cognito_user_pools",
+        "x-amazon-apigateway-authtype": "custom",
         "x-amazon-apigateway-authorizer": {
-          "type": "cognito_user_pools",
-          "identitySource": "method.request.header.Authorization",
-          "providerARNs": [
-            {
-              "Fn::Sub": "${UserPool.Arn}"
-            }
-          ]
+          "type": "token",
+          "authorizerUri": {
+            "Fn::Sub": "arn:aws:apigateway:${aws:region}:lambda:path/2015-03-31/functions/${AuthorizerLambdaFunction.Arn}/invocations"
+          },
+          "authorizerResultTtlInSeconds": 1,
+          "identitySource": "method.request.header.Authorization"
         }
       }
     }

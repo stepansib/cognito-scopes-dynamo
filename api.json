@@ -26,6 +26,11 @@
         "security": [
           {
             "custom_authorizer": []
+          },
+          {
+            "oauth2ClientCredentials": [
+              "account/read"
+            ]
           }
         ],
         "responses": {
@@ -65,6 +70,12 @@
         "security": [
           {
             "custom_authorizer": []
+          },
+          {
+            "oauth2ClientCredentials": [
+              "account/read",
+              "account/write"
+            ]
           }
         ],
         "responses": {
@@ -109,6 +120,20 @@
       }
     },
     "securitySchemes": {
+      "oauth2ClientCredentials": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": {
+              "Fn::Sub": "https://${UserPool}.auth.${aws:region}.amazoncognito.com/oauth2/token"
+            },
+            "scopes": {
+              "account/read": "Read accounts",
+              "account/write": "Create/update/delete accounts"
+            }
+          }
+        }
+      },
       "custom_authorizer": {
         "type": "apiKey",
         "name": "Authorization",

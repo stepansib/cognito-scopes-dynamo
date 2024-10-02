@@ -18,6 +18,7 @@ paths:
             type: string
       security:
         - custom_authorizer: [ ]
+        - oauth2ClientCredentials: [ 'account/read' ]
       responses:
         200:
           $ref: '#/components/responses/SuccessfulResponse'
@@ -42,6 +43,7 @@ paths:
       operationId: createAccount
       security:
         - custom_authorizer: [ ]
+        - oauth2ClientCredentials: [ 'account/read', 'account/write' ]
       responses:
         201:
           $ref: '#/components/responses/EmptyResponse'
@@ -70,6 +72,15 @@ components:
       description: Empty response
 
   securitySchemes:
+    oauth2ClientCredentials:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl:
+            Fn::Sub: https://${UserPool}.auth.${aws:region}.amazoncognito.com/oauth2/token
+          scopes:
+            account/read: Read accounts
+            account/write: Create/update/delete accounts
     custom_authorizer: #Todo: Make it dynamic and pull the actual name from IaC
       type: apiKey
       name: Authorization
