@@ -100,8 +100,13 @@ const validateToken = async (
       client: tokenPayload.client_id,
     } satisfies AllowedScopesPolicyRecordKey,
   });
-  const clientScopes = (await dynamoDocumentClient.send(getItemCommand))
-    .Item as AllowedScopesPolicy;
+
+  let clientScopes;
+  try {
+    clientScopes = (await dynamoDocumentClient.send(getItemCommand)).Item as AllowedScopesPolicy;
+  } catch (err) {
+    throw new Error(`No configuration found for ${tokenPayload.client_id} client`);
+  }
 
   // Check if client has all the required scopes
   requiredOperationScopes.forEach((requiredScope) => {

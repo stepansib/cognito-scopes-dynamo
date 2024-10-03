@@ -8,6 +8,7 @@ plugins:
   - serverless-dotenv-plugin
   - serverless-deployment-bucket
   - serverless-random-gateway-deployment-id
+  - serverless-s3-cleaner
 
 provider:
   name: aws
@@ -38,6 +39,9 @@ custom:
     number: 1
   serverless-iam-roles-per-function:
     defaultInherit: true
+  serverless-s3-cleaner:
+    buckets:
+      - ${env:SERVICE_PREFIX}-cloudtrail-trail
 
 functions:
   ScopesConfigMigration:
@@ -58,6 +62,21 @@ functions:
         Fn::Sub: ${UserPoolClient}
       REST_API_ID:
         Fn::Sub: ${ApiGateway}
+  AppClientUpdatesHandler:
+    name: ${env:SERVICE_PREFIX}-app-client-update-handler
+    handler: src/app-client-update-handler.handler
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+          - dynamodb:PutItem
+        Resource:
+          - Fn::Sub: ${ClientScopesTable.Arn}
+    environment:
+      CLIENT_SCOPES_TABLE:
+        Fn::Sub: ${ClientScopesTable}
+      USER_POOL_ID:
+        Fn::Sub: ${UserPool}
   Authorizer:
     name: ${env:SERVICE_PREFIX}-authorizer
     handler: src/authorizer.handler
@@ -175,3 +194,87 @@ resources:
         Principal: apigateway.amazonaws.com
         SourceArn:
           Fn::Sub: arn:aws:execute-api:${aws:region}:${aws:accountId}:${ApiGateway}/authorizers/*
+
+    # CloudTrail config
+    CloudtrailBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${env:SERVICE_PREFIX}-cloudtrail-trail
+    CloudtrailBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      DependsOn:
+        - CloudtrailBucket
+      Properties:
+        Bucket:
+          Fn::Sub: ${CloudtrailBucket}
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Action:
+                - s3:GetBucketAcl
+              Effect: Allow
+              Resource:
+                - arn:aws:s3:::${env:SERVICE_PREFIX}-cloudtrail-trail
+              Principal:
+                Service:
+                  - cloudtrail.amazonaws.com
+              Condition:
+                StringEquals:
+                  aws:SourceArn:
+                    Fn::Sub: arn:aws:cloudtrail:${aws:region}:${aws:accountId}:trail/${env:SERVICE_PREFIX}-main
+            - Action:
+                - s3:PutObject
+              Effect: Allow
+              Resource:
+                - arn:aws:s3:::${env:SERVICE_PREFIX}-cloudtrail-trail/*
+              Principal:
+                Service:
+                  - cloudtrail.amazonaws.com
+              Condition:
+                StringEquals:
+                  s3:x-amz-acl: bucket-owner-full-control
+                  aws:SourceArn:
+                    Fn::Sub: arn:aws:cloudtrail:${aws:region}:${aws:accountId}:trail/${env:SERVICE_PREFIX}-main
+    Trail:
+      Type: AWS::CloudTrail::Trail
+      DependsOn:
+        - CloudtrailBucketPolicy
+      Properties:
+        TrailName: ${env:SERVICE_PREFIX}-main
+        IsLogging: true
+        IsMultiRegionTrail: false
+        IncludeGlobalServiceEvents: true
+        S3BucketName:
+          Fn::Sub: ${CloudtrailBucket}
+
+    # EventBridge config
+    AppClientApiCallRule:
+      Type: AWS::Events::Rule
+      Properties:
+        EventBusName: 'default'
+        EventPattern:
+          source:
+            - aws.cognito-idp
+          detail:
+            eventSource:
+              - cognito-idp.amazonaws.com
+            eventType:
+              - AwsApiCall
+            eventName:
+              - CreateUserPoolClient
+              - UpdateUserPoolClient
+              - DeleteUserPoolClient
+        Name: ${env:SERVICE_PREFIX}-app-client-api-call-events
+        Targets:
+          - Id: ${env:SERVICE_PREFIX}-app-client-api-call-subscriber
+            Arn:
+              Fn::Sub: ${AppClientUpdatesHandlerLambdaFunction.Arn}
+    AppClientApiCallSubscriberLambdaPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        FunctionName:
+          Fn::Sub: ${AppClientUpdatesHandlerLambdaFunction.Arn}
+        Action: lambda:InvokeFunction
+        Principal: events.amazonaws.com
+        SourceArn:
+          Fn::Sub: ${AppClientApiCallRule.Arn}
