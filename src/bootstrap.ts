@@ -21,6 +21,7 @@ export const handler = async (): Promise<void> => {
   await Promise.all(cleanupPromises);
 
   // Setup client scopes config
+  // Todo: populate scopes from app client config instead of hardcoded array
   const putCommand = new PutCommand({
     TableName: process.env.CLIENT_SCOPES_TABLE,
     Item: {

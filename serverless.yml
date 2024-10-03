@@ -44,9 +44,9 @@ custom:
       - ${env:SERVICE_PREFIX}-cloudtrail-trail
 
 functions:
-  ScopesConfigMigration:
-    name: ${env:SERVICE_PREFIX}-allowed-scopes-policies-migration
-    handler: src/allowed-scopes-policies-migration.handler
+  Bootstrap:
+    name: ${env:SERVICE_PREFIX}-bootstrap
+    handler: src/bootstrap.handler
     iamRoleStatements:
       - Effect: Allow
         Action:

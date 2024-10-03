@@ -49,6 +49,7 @@ const verifyToken = async (token: string): Promise<CognitoAccessToken> => {
 
 const resolveOperationRequiredScopes = (methodDetails: MethodDetails): string[] => {
   // Todo: implement dynamic spec file definition (depending on API ID)
+  // Todo: get rid of conversion to JSON, probably with https://www.npmjs.com/package/yaml
   // Find matching OpenApi path by URL and HTTP method
   // by iterating all paths in API spec
   let operationDefinition: {
