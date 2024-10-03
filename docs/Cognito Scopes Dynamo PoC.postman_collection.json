@@ -1,0 +1,138 @@
+{
+	"info": {
+		"_postman_id": "7aadc003-d4b0-4713-866e-7e7ef187f6a0",
+		"name": "Cognito Scopes Dynamo PoC",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "1276057"
+	},
+	"item": [
+		{
+			"name": "Account",
+			"item": [
+				{
+					"name": "Get account",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{accountApiUrl}}/account/42",
+							"host": [
+								"{{accountApiUrl}}"
+							],
+							"path": [
+								"account",
+								"42"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create account",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{accountApiUrl}}/account",
+							"host": [
+								"{{accountApiUrl}}"
+							],
+							"path": [
+								"account"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "oauth2",
+		"oauth2": [
+			{
+				"key": "accessTokenUrl",
+				"value": "{{tokenUrl}}",
+				"type": "string"
+			},
+			{
+				"key": "clientSecret",
+				"value": "{{clientSecret}}",
+				"type": "string"
+			},
+			{
+				"key": "clientId",
+				"value": "{{clientId}}",
+				"type": "string"
+			},
+			{
+				"key": "tokenName",
+				"value": "Main access token",
+				"type": "string"
+			},
+			{
+				"key": "grant_type",
+				"value": "client_credentials",
+				"type": "string"
+			},
+			{
+				"key": "addTokenTo",
+				"value": "header",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "accountApiUrl",
+			"value": "https://xxxx.execute-api.us-east-1.amazonaws.com/dev",
+			"type": "string"
+		},
+		{
+			"key": "clientId",
+			"value": "1tr55e46vbrk97he0ea2dic147",
+			"type": "string"
+		},
+		{
+			"key": "clientSecret",
+			"value": "1oa23olci26m28sulk4c0sitlkikbgmbqrof5dvd5hnt8eiqrb11",
+			"type": "string"
+		},
+		{
+			"key": "tokenUrl",
+			"value": "https://csd-user-pool.auth.us-east-1.amazoncognito.com/oauth2/token",
+			"type": "string"
+		}
+	]
+}
