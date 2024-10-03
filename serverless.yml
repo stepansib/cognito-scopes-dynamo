@@ -264,6 +264,9 @@ resources:
               - CreateUserPoolClient
               - UpdateUserPoolClient
               - DeleteUserPoolClient
+            requestParameters:
+              userPoolId:
+                - Fn::Sub: ${UserPool}
         Name: ${env:SERVICE_PREFIX}-app-client-api-call-events
         Targets:
           - Id: ${env:SERVICE_PREFIX}-app-client-api-call-subscriber
