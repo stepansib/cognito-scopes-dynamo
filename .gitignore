@@ -1,0 +1,13 @@
+.amplify
+.husky
+.idea
+.serverless
+.webpack
+.vite
+node_modules
+build
+dist
+.DS_Store
+.env
+.env.*
+!.env.dist

@@ -1,0 +1,146 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "Cognito Scopes Dynamo PoC - Account API",
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/license/mit/"
+    }
+  },
+  "paths": {
+    "/account/{accountId}": {
+      "get": {
+        "operationId": "getAccount",
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "description": "The id of the account to retrieve",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "custom_authorizer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Unexpected error"
+          },
+          "403": {
+            "description": "Unexpected error"
+          },
+          "500": {
+            "description": "Unexpected error"
+          }
+        },
+        "x-amazon-apigateway-request-validator": "params-only",
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseTemplates": {
+                "application/json": "{\n    \"accountData\": \"...JSON object...\"\n}"
+              }
+            }
+          },
+          "requestTemplates": {
+            "application/json": "{\n    \"statusCode\": 200\n}"
+          }
+        }
+      }
+    },
+    "/account": {
+      "post": {
+        "operationId": "createAccount",
+        "security": [
+          {
+            "custom_authorizer": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Empty response"
+          },
+          "401": {
+            "description": "Unexpected error"
+          },
+          "403": {
+            "description": "Unexpected error"
+          },
+          "500": {
+            "description": "Unexpected error"
+          }
+        },
+        "x-amazon-apigateway-request-validator": "none",
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "responses": {
+            "default": {
+              "statusCode": "201"
+            }
+          },
+          "requestTemplates": {
+            "application/json": "{\n    \"statusCode\": 201\n}"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "HttpError": {
+        "description": "Unexpected error"
+      },
+      "SuccessfulResponse": {
+        "description": "Successful response"
+      },
+      "EmptyResponse": {
+        "description": "Empty response"
+      }
+    },
+    "securitySchemes": {
+      "custom_authorizer": {
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header",
+        "x-amazon-apigateway-authtype": "custom",
+        "x-amazon-apigateway-authorizer": {
+          "type": "token",
+          "authorizerUri": {
+            "Fn::Sub": "arn:aws:apigateway:${aws:region}:lambda:path/2015-03-31/functions/${AuthorizerLambdaFunction.Arn}/invocations"
+          },
+          "authorizerResultTtlInSeconds": 1,
+          "identitySource": "method.request.header.Authorization"
+        }
+      }
+    }
+  },
+  "x-amazon-apigateway-request-validators": {
+    "all": {
+      "validateRequestParameters": true,
+      "validateRequestBody": true
+    },
+    "params-only": {
+      "validateRequestParameters": true,
+      "validateRequestBody": false
+    },
+    "body-only": {
+      "validateRequestParameters": false,
+      "validateRequestBody": true
+    },
+    "none": {
+      "validateRequestParameters": false,
+      "validateRequestBody": false
+    }
+  }
+}

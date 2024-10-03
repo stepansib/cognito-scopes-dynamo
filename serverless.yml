@@ -1,0 +1,208 @@
+useDotenv: true
+service: cognito-scopes-dynamo-poc
+
+plugins:
+  - serverless-webpack
+  - serverless-iam-roles-per-function
+  - serverless-prune-plugin
+  - serverless-dotenv-plugin
+  - serverless-deployment-bucket
+  - serverless-random-gateway-deployment-id
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, env:AWS_REGION, 'us-east-1'}
+  deploymentBucket:
+    name: ${env:SERVICE_PREFIX}-deployment-${aws:region}
+
+custom:
+  dotenv:
+    exclude:
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_REGION
+  webpack:
+    webpackConfig: 'webpack.config.js'
+    includeModules:
+      forceExclude:
+        - 'aws-sdk'
+        - '@aws-sdk/client-dynamodb'
+        - '@aws-sdk/lib-dynamodb'
+    packager: 'npm'
+    keepOutputDirectory: false
+  prune:
+    automatic: true
+    includeLayers: true
+    number: 1
+  serverless-iam-roles-per-function:
+    defaultInherit: true
+
+functions:
+  ScopesConfigMigration:
+    name: ${env:SERVICE_PREFIX}-allowed-scopes-policies-migration
+    handler: src/allowed-scopes-policies-migration.handler
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Scan
+          - dynamodb:DeleteItem
+          - dynamodb:PutItem
+        Resource:
+          - Fn::Sub: ${ClientScopesTable.Arn}
+    environment:
+      CLIENT_SCOPES_TABLE:
+        Fn::Sub: ${ClientScopesTable}
+      APP_CLIENT_ID:
+        Fn::Sub: ${UserPoolClient}
+      REST_API_ID:
+        Fn::Sub: ${ApiGatewayAccount}
+  Authorizer:
+    name: ${env:SERVICE_PREFIX}-authorizer
+    handler: src/authorizer.handler
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - Fn::Sub: ${ClientScopesTable.Arn}
+    environment:
+      CLIENT_SCOPES_TABLE:
+        Fn::Sub: ${ClientScopesTable}
+      USER_POOL_ID:
+        Fn::Sub: ${UserPool}
+
+resources:
+  Resources:
+    # Cognito config
+    UserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: ${env:SERVICE_PREFIX}-user-pool
+        UsernameAttributes:
+          - email
+        AccountRecoverySetting:
+          RecoveryMechanisms:
+            - Name: verified_email
+              Priority: 1
+        Schema:
+          - Name: email
+            Required: false
+        AutoVerifiedAttributes:
+          - email
+        UserAttributeUpdateSettings:
+          AttributesRequireVerificationBeforeUpdate:
+            - email
+        VerificationMessageTemplate:
+          DefaultEmailOption: CONFIRM_WITH_CODE
+        EmailConfiguration:
+          EmailSendingAccount: COGNITO_DEFAULT
+    UserPoolDomain:
+      Type: AWS::Cognito::UserPoolDomain
+      DependsOn:
+        - UserPool
+      Properties:
+        UserPoolId:
+          Fn::Sub: ${UserPool}
+        Domain: ${env:SERVICE_PREFIX}-user-pool
+    UserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      DependsOn:
+        - FooBarResourceServer
+        - ArticlesResourceServer
+      Properties:
+        ClientName: ${env:SERVICE_PREFIX}-app-client
+        UserPoolId:
+          Fn::Sub: ${UserPool}
+        AllowedOAuthFlows:
+          - client_credentials
+        AllowedOAuthScopes:
+          - foobar/42
+          - articles/read
+          - articles/write
+        AllowedOAuthFlowsUserPoolClient: true
+        ExplicitAuthFlows:
+          - ALLOW_USER_SRP_AUTH
+          - ALLOW_REFRESH_TOKEN_AUTH
+        GenerateSecret: true
+        EnableTokenRevocation: true
+        PreventUserExistenceErrors: ENABLED
+    FooBarResourceServer:
+      Type: AWS::Cognito::UserPoolResourceServer
+      Properties:
+        Identifier: foobar
+        Name: ${env:SERVICE_PREFIX}-foobar
+        Scopes:
+          - ScopeDescription: Default dummy scope
+            ScopeName: 42
+        UserPoolId:
+          Fn::Sub: ${UserPool}
+    ArticlesResourceServer:
+      Type: AWS::Cognito::UserPoolResourceServer
+      Properties:
+        Identifier: articles
+        Name: ${env:SERVICE_PREFIX}-articles
+        Scopes:
+          - ScopeDescription: Read articles
+            ScopeName: read
+          - ScopeDescription: Create/update/delete articles
+            ScopeName: write
+        UserPoolId:
+          Fn::Sub: ${UserPool}
+
+    # DynamoDB config
+    ClientScopesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${env:SERVICE_PREFIX}-client-scopes-policies
+        KeySchema:
+          - AttributeName: principal
+            KeyType: HASH
+          - AttributeName: resource
+            KeyType: RANGE
+        AttributeDefinitions:
+          - AttributeName: principal
+            AttributeType: S
+          - AttributeName: resource
+            AttributeType: S
+        BillingMode: PAY_PER_REQUEST
+
+    # Account API config
+    ApiGatewayAccount:
+      Type: AWS::ApiGateway::RestApi
+      Properties:
+        Name: ${env:SERVICE_PREFIX}-account
+        Body: ${file(./api-account.yaml)}
+    ApiGatewayDeploymentAccount:
+      Type: AWS::ApiGateway::Deployment
+      DependsOn:
+        - ApiGatewayAccount
+      Properties:
+        RestApiId:
+          Fn::Sub: ${ApiGatewayAccount}
+        StageName: ${self:provider.stage}
+    AuthorizerLambdaPermissionAccount:
+      Type: AWS::Lambda::Permission
+      Properties:
+        Action: lambda:InvokeFunction
+        FunctionName:
+          Fn::Sub: ${AuthorizerLambdaFunction.Arn}
+        Principal: apigateway.amazonaws.com
+        SourceArn:
+          Fn::Sub: arn:aws:execute-api:${aws:region}:${aws:accountId}:${ApiGatewayAccount}/authorizers/*
+
+    # Articles API config
+    ApiGatewayArticles:
+      Type: AWS::ApiGateway::RestApi
+      Properties:
+        Name: ${env:SERVICE_PREFIX}-articles
+        Body: ${file(./api-articles.yaml)}
+    ApiGatewayDeploymentArticles:
+      Type: AWS::ApiGateway::Deployment
+      DependsOn:
+        - ApiGatewayArticles
+      Properties:
+        RestApiId:
+          Fn::Sub: ${ApiGatewayArticles}
+        StageName: ${self:provider.stage}

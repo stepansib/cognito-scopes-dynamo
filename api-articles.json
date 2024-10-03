@@ -1,0 +1,151 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "Cognito Scopes Dynamo PoC - Articles API",
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/license/mit/"
+    }
+  },
+  "paths": {
+    "/article/{articleId}": {
+      "get": {
+        "operationId": "getArticle",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "description": "The id of the article to retrieve",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "cognito_authorizer": [
+              "articles/read"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Unexpected error"
+          },
+          "403": {
+            "description": "Unexpected error"
+          },
+          "500": {
+            "description": "Unexpected error"
+          }
+        },
+        "x-amazon-apigateway-request-validator": "params-only",
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseTemplates": {
+                "application/json": "{\n    \"articleData\": \"...JSON object...\"\n}"
+              }
+            }
+          },
+          "requestTemplates": {
+            "application/json": "{\n    \"statusCode\": 200\n}"
+          }
+        }
+      }
+    },
+    "/article": {
+      "post": {
+        "operationId": "createArticle",
+        "security": [
+          {
+            "cognito_authorizer": [
+              "articles/write"
+            ]
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Empty response"
+          },
+          "401": {
+            "description": "Unexpected error"
+          },
+          "403": {
+            "description": "Unexpected error"
+          },
+          "500": {
+            "description": "Unexpected error"
+          }
+        },
+        "x-amazon-apigateway-request-validator": "none",
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "responses": {
+            "default": {
+              "statusCode": "201"
+            }
+          },
+          "requestTemplates": {
+            "application/json": "{\n    \"statusCode\": 201\n}"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "HttpError": {
+        "description": "Unexpected error"
+      },
+      "SuccessfulResponse": {
+        "description": "Successful response"
+      },
+      "EmptyResponse": {
+        "description": "Empty response"
+      }
+    },
+    "securitySchemes": {
+      "cognito_authorizer": {
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header",
+        "x-amazon-apigateway-authtype": "cognito_user_pools",
+        "x-amazon-apigateway-authorizer": {
+          "type": "cognito_user_pools",
+          "identitySource": "method.request.header.Authorization",
+          "providerARNs": [
+            {
+              "Fn::Sub": "${UserPool.Arn}"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "x-amazon-apigateway-request-validators": {
+    "all": {
+      "validateRequestParameters": true,
+      "validateRequestBody": true
+    },
+    "params-only": {
+      "validateRequestParameters": true,
+      "validateRequestBody": false
+    },
+    "body-only": {
+      "validateRequestParameters": false,
+      "validateRequestBody": true
+    },
+    "none": {
+      "validateRequestParameters": false,
+      "validateRequestBody": false
+    }
+  }
+}
