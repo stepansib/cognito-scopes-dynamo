@@ -101,7 +101,7 @@ const validateToken = async (
     } satisfies AllowedScopesPolicyRecordKey,
   });
 
-  let clientScopes;
+  let clientScopes: AllowedScopesPolicy;
   try {
     clientScopes = (await dynamoDocumentClient.send(getItemCommand)).Item as AllowedScopesPolicy;
   } catch (err) {
