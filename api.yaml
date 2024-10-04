@@ -81,7 +81,7 @@ components:
           scopes:
             account/read: Read accounts
             account/write: Create/update/delete accounts
-    custom_authorizer: #Todo: Make it dynamic and pull the actual name from IaC
+    custom_authorizer:
       type: apiKey
       name: Authorization
       in: header

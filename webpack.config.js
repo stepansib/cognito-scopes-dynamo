@@ -1,6 +1,7 @@
 const slsw = require('serverless-webpack');
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 const nodeExternals = require('webpack-node-externals');
+const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   context: __dirname,
@@ -14,11 +15,19 @@ module.exports = {
     plugins: [new TsconfigPathsPlugin()],
   },
 
+  plugins: [
+    new CopyPlugin({
+      patterns: [
+        __dirname + '/api.yaml',
+      ],
+    }),
+  ],
+
   module: {
     rules: [{
       test: /\.(tsx?)$/,
       loader: 'ts-loader',
-      exclude: [[__dirname + 'node_modules', __dirname + '.serverless', __dirname + '.webpack']],
+      exclude: [[__dirname + '/node_modules', __dirname + '/.serverless', __dirname + '/.webpack']],
       options: {
         transpileOnly: true, experimentalWatchApi: true,
       },
