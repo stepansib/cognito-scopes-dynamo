@@ -31,6 +31,7 @@ custom:
         - 'aws-sdk'
         - '@aws-sdk/client-dynamodb'
         - '@aws-sdk/lib-dynamodb'
+        - '@aws-sdk/client-cognito-identity-provider'
     packager: 'npm'
     keepOutputDirectory: false
   prune:
@@ -55,13 +56,18 @@ functions:
           - dynamodb:PutItem
         Resource:
           - Fn::Sub: ${ClientScopesTable.Arn}
+      - Effect: Allow
+        Action:
+          - cognito-idp:DescribeUserPoolClient
+        Resource:
+          - Fn::Sub: ${UserPool.Arn}
     environment:
       CLIENT_SCOPES_TABLE:
         Fn::Sub: ${ClientScopesTable}
+      USER_POOL_ID:
+        Fn::Sub: ${UserPool}
       APP_CLIENT_ID:
         Fn::Sub: ${UserPoolClient}
-      REST_API_ID:
-        Fn::Sub: ${ApiGateway}
   AppClientUpdatesHandler:
     name: ${env:SERVICE_PREFIX}-app-client-update-handler
     handler: src/app-client-update-handler.handler
